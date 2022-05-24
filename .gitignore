@@ -1,0 +1,5 @@
+/venv/*
+/init/*
+init.zip
+/__pycache__/*
+RACK2022.xlsx

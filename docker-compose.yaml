@@ -15,8 +15,8 @@ services:
       SLM_HOST: "http://192.168.153.47"
       XLSX_FILE: "/RACK2022.xlsx"
       SHEET_NAME: "DEVICES"
-      FORCE_OVERWRITE: False
-      FORCE_DELETE: False
+      FORCE_OVERWRITE: "False"
+      FORCE_DELETE: "True"
 
 
 

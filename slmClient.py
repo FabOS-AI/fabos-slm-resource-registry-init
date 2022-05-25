@@ -76,12 +76,11 @@ class slmClient():
         return res
 
 
-    def create_resource(self, uuid:str, capabilities: list, item) -> requests.models.Response:
-        """Creates the resource for the given uuid, item and capabilities
+    def create_resource(self, uuid:str, item) -> requests.models.Response:
+        """Creates the resource for the given uuid
 
         Args:
             uuid (str): the uuid for the resource to be created
-            capabilities (list): a list of capabilities to be set additionally
             item (_type_): the item to be used for the creation
 
         Returns:
@@ -103,6 +102,21 @@ class slmClient():
         else:
             print(f"FAILED({res.status_code}): added resource '{uuid}' with config: {item}")
 
+        return res
+
+
+
+    def add_capabilities(self, uuid:str, capabilities: list) -> requests.models.Response:
+        """adds given capabilties to resource by given uuid
+
+        Args:
+            uuid (str): the resource to add the capabilities
+            capabilities (list): a list of capabilities
+            item (_type_): the resource item
+
+        Returns:
+            requests.models.Response: the raw http response
+        """
         if capabilities:
 
             capability_options = ["SHELL", "DOCKER", "TRANSFERAPP", "DOCKER_SWARM", "K3S"]
@@ -110,9 +124,6 @@ class slmClient():
             for capability in capabilities:
 
                 if capability in capability_options:
-
-                    print("pause for registry to breath")
-                    time.sleep(4)
 
                     headers = {
                         'Authorization': self.token,
@@ -131,8 +142,15 @@ class slmClient():
 
                 else:
                     print(f"FAILED: capability '{capability}' not in {capability_options}. Skipping ...")
-        return res
-    
+                    return None
+            return res
+
+        else:
+            print(f"SUCCESS: capabilities skipped since no are given ...")
+            return None
+
+
+
     def get_resources(self) -> list:
         """Gets all resource from resource registry
 

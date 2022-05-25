@@ -12,8 +12,8 @@ RESOURCE_REGISTRY_HOST = str(os.getenv("RESOURCE_REGISTRY_HOST", f"{SLM_HOST}:90
 KEYCLOAK_HOST = str(os.getenv("KEYCLOAK_HOST", f"{SLM_HOST}:7080"))
 XLSX_FILE = str(os.getenv("XLSX_FILE", "RACK2022.xlsx"))
 SHEET_NAME = str(os.getenv("SHEET_NAME", "DEVICES"))
-FORCE_OVERWRITE = bool(os.getenv("FORCE_OVERWRITE", False))
-
+FORCE_OVERWRITE = os.getenv("FORCE_OVERWRITE", False)
+FORCE_DELETE = os.getenv("FORCE_DELETE", False)
 
 
 def build_argparser():
@@ -56,11 +56,9 @@ if __name__ == "__main__":
         device_resource_item["resourceUsername"] = row["user"]
         device_resource_item["resourcePassword"] = row["password"]
 
-        # if ping(row["hostname"] + ".local"):
-        #         device_resource_item["resourceHostname"] = row["hostname"] + ".local"
-        # else:
-        print(f"WARNING: Device '{row['UUID']}' with hostname '{row['hostname']+'.local'}' is not available via PING. Setting IP as hostname ...")
-        device_resource_item["resourceHostname"] = device_resource_item["resourceIp"]
+        if not ping(row["hostname"] + ".local"):
+                print(f"WARNING: Device '{row['UUID']}' with hostname '{row['hostname']+'.local'}' is not available via PING!")
+        device_resource_item["resourceHostname"] = row["hostname"] + ".local"
         
         
         # parse capabilities
@@ -74,14 +72,17 @@ if __name__ == "__main__":
         if "DC_K3S" in row.keys() and row["DC_K3S"] == "yes":
                 capabilities.append("K3S")
 
-        # additional ping test
-        if not ping(device_resource_item["resourceHostname"]):
-            print(f"ERROR: Device '{row['UUID']}' with hostname '{device_resource_item['resourceHostname']}' is not available via PING. Aborting setup!")
+        # additional IP ping test
+        if not ping(device_resource_item["resourceIp"]):
+            print(f"ERROR: Device '{row['UUID']}' with IP '{device_resource_item['resourceIp']}' is not available via PING. Aborting setup!")
             break
         resources_accessible.append(f"{row['UUID']}, {device_resource_item['resourceHostname']}, {device_resource_item['resourceIp']}")
 
         # delete resource first
-        # slm.delete_resource(uuid=row["UUID"])
+        if FORCE_DELETE:
+                slm.delete_resource(uuid=row["UUID"])
+                print("pause for registry to breath\n")
+                time.sleep(4)
 
         if slm.get_resource(row['UUID']):
 
@@ -95,7 +96,7 @@ if __name__ == "__main__":
                 print(slm.create_resource(uuid=row["UUID"], item=device_resource_item, capabilities=capabilities))
                 resources_added.append(f"{row['UUID']}, {device_resource_item['resourceHostname']}, {device_resource_item['resourceIp']}")
         
-        print("pause for registry to breath\n")
+        print("pause for registry to breath\n----------------------------------------------------")
         time.sleep(1)
     
     # finish

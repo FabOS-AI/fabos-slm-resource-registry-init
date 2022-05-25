@@ -112,7 +112,7 @@ class slmClient():
                 if capability in capability_options:
 
                     print("pause for registry to breath")
-                    time.sleep(2)
+                    time.sleep(4)
 
                     headers = {
                         'Authorization': self.token,

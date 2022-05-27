@@ -1,4 +1,3 @@
-import time
 import pandas as pd
 import json
 import requests
@@ -13,12 +12,14 @@ DEFAULT_RESOURCE_ITEM = {
 }
 
 
+
 class slmClient():
     def __init__(self, host, host_keycloak, host_resource_registry):
         self.host = host
         self.host_keycloak = host_keycloak
         self.host_resource_registry = host_resource_registry
         self.token = f"Bearer {self.get_keycloak_token()}"
+
 
 
     def get_keycloak_token(self) -> str:
@@ -45,6 +46,7 @@ class slmClient():
             print(f"SUCCESS({res.status_code}): got access_token from keycloak")
 
         return res.json()["access_token"]
+
 
 
     def delete_resource(self, uuid:str) -> requests.models.Response:
@@ -74,6 +76,7 @@ class slmClient():
             print(f"FAILED({res.status_code}): removed resource '{uuid}'")
 
         return res
+
 
 
     def create_resource(self, uuid:str, item) -> requests.models.Response:
@@ -173,6 +176,8 @@ class slmClient():
             print(f"FAILED({res.status_code}): getting resources failed")
 
         return res.json()
+
+
 
     def get_resource(self, uuid:str) -> object:
         """Gets the resource for the given uuid at resource registry

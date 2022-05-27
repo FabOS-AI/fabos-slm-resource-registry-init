@@ -17,6 +17,8 @@ services:
       SHEET_NAME: "DEVICES"
       FORCE_OVERWRITE: "False"
       FORCE_DELETE: "True"
+      DELETE_ALL: "False"
+      PING_CHECK: "False"
 
 
 

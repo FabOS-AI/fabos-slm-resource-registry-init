@@ -88,7 +88,7 @@ if __name__ == "__main__":
                         else:
                                 print(f"Skipped deleting resource '{resource['id']}' since it is not in source file '{XLSX_FILE}'")
 
-    print("pause for registry to breath (long - 5s) ... will continue with adding capabilities\n------------------------------------------------------------------------")
+    print("pause for registry to breath (long - 5s) ... will continue with adding resources\n------------------------------------------------------------------------")
     time.sleep(5)
 
     print(f"Starting resource creation (FORCE_OVERWRITE={FORCE_OVERWRITE}):-----------------------------------------------------------")
@@ -131,7 +131,21 @@ if __name__ == "__main__":
         # time.sleep(1)
     
     print("pause for registry to breath (long - 10s) ... will continue with adding capabilities\n------------------------------------------------------------------------")
-    time.sleep(10)
+    time.sleep(20)
+    
+    print(f"Checking available resources:-----------------------------------------------------------")
+    resources_current = [resource["id"] for resource in slm.get_resources()]
+    if len(resources_current) > 0
+        print(f"'{len(resources_current)}' resources are available. Continuing with adding capabilities...")
+    else:
+        print(f"'{len(resources_current)}' resources are available. Additionally waiting 20s for resources...")
+        time.sleep(20)
+        print(f"Checking available resources again")
+        resources_current = [resource["id"] for resource in slm.get_resources()]
+        if len(resources_current) > 0
+                print(f"'{len(resources_current)}' resources are available. Continuing with adding capabilities...")
+        else:
+                print(f"ERROR: '{len(resources_current)}' resources are available. Continuing, but expecting failure!")
 
 
     print(f"Starting adding capabilities:-----------------------------------------------------------")

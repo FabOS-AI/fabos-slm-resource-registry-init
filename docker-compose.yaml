@@ -16,7 +16,7 @@ services:
       XLSX_FILE: "/RACK2022.xlsx"
       SHEET_NAME: "DEVICES"
       FORCE_OVERWRITE: "False"
-      FORCE_DELETE: "True"
+      FORCE_DELETE: "False"
       DELETE_ALL: "False"
       PING_CHECK: "False"
 

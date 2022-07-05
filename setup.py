@@ -50,15 +50,15 @@ def build_argparser():
 
 
 def main(args):
-        """The main function to add resources and their capabilites
-        Args:
-            args (argparse arguments): the parsed args
-        """
+    """The main function to add resources and their capabilites
+    Args:
+        args (argparse arguments): the parsed args
+    """
 
     # check if EXCEL file exists
     if not os.path.exists(XLSX_FILE):
-            print(f"ERORR: file '{XLSX_FILE}' does not exist. Please either add the file or change environment variable 'XLSX_FILE' accordingly!")
-            exit(1)
+        print(f"ERORR: file '{XLSX_FILE}' does not exist. Please either add the file or change environment variable 'XLSX_FILE' accordingly!")
+        exit(1)
     # read file, and only use resources
     df = pd.read_excel(XLSX_FILE, sheet_name=SHEET_NAME)
     df_devices = df[df['is_resource']=="yes"]

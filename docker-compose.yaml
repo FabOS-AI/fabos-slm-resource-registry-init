@@ -7,12 +7,12 @@ services:
       dockerfile: Dockerfile
     container_name: resource-registry-init
     volumes:
-      - "./RACK2022.xlsx:/RACK2022.xlsx"
+      - "./:/files"
     environment:
       SLM_HOST: "http://192.168.153.47"
       SLM_USER: "fabos"
       SLM_PASSWORD: "password"
-      XLSX_FILE: "/RACK2022.xlsx"
+      XLSX_FILE: "/files/example.xlsx"
       SHEET_NAME: "DEVICES"
       FORCE_OVERWRITE: "False"
       FORCE_DELETE: "False"

@@ -1,7 +1,7 @@
 from utils import *
 import pandas as pd
 
-XLSX_FILE = "RACK2022.xlsx"
+XLSX_FILE = "example.xlsx"
 SHEET_NAME = "DEVICES"
 
     

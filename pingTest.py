@@ -1,8 +1,8 @@
 from utils import *
 import pandas as pd
 
-XLSX_FILE = "Device Rack.xlsx"
-SHEET_NAME = "2022"
+XLSX_FILE = "RACK2022.xlsx"
+SHEET_NAME = "DEVICES"
 
     
 
@@ -18,8 +18,10 @@ if __name__ == "__main__":
         # create data item based on defaults
         resourceIp = row["eth0 IP"] if row["eth0 IP"]!="-" else row["eth1 IP"]
         resourceHostname = row["hostname"] + ".local"
-
-        if not ping(resourceHostname):
+        
+        if ping(resourceHostname):
+            print(f"SUCCESS: Device '{row['UUID']}' with hostname '{resourceHostname}' is available via PING")
+        else: 
             print(f"WARNING: Device '{row['UUID']}' with hostname '{resourceHostname}' is not available via PING")
 
             if not ping(resourceIp):

@@ -2,6 +2,7 @@ import pandas as pd
 import json
 import requests
 
+
 DEFAULT_RESOURCE_ITEM = {
     "resourceHostname": "",
     "resourceIp": "",
@@ -12,14 +13,16 @@ DEFAULT_RESOURCE_ITEM = {
 }
 
 
-
 class slmClient():
-    def __init__(self, host, host_keycloak, host_resource_registry):
+    """A client class for interaction with the SLM
+    """
+    def __init__(self, host, host_keycloak, host_resource_registry, slm_user, slm_password):
         self.host = host
         self.host_keycloak = host_keycloak
         self.host_resource_registry = host_resource_registry
+        self.slm_user = slm_user
+        self.slm_password = slm_password
         self.token = f"Bearer {self.get_keycloak_token()}"
-
 
 
     def get_keycloak_token(self) -> str:
@@ -29,10 +32,10 @@ class slmClient():
         """
 
         token_data = {
-            "client_id":"self-service-portal",
-            "grant_type":"password",
-            "username":"fabos",
-            "password":"password"
+            "client_id": "self-service-portal",
+            "grant_type": "password",
+            "username": self.slm_user,
+            "password": self.slm_password
         }
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
@@ -44,9 +47,10 @@ class slmClient():
 
         if "access_token" in res.json().keys():
             print(f"SUCCESS({res.status_code}): got access_token from keycloak")
-
+        else:
+            print(f"ERORR({res.status_code}): can not get access_token from keycloak ({res.json()['error_description']}). Aborting...")
+            exit(1)
         return res.json()["access_token"]
-
 
 
     def delete_resource(self, uuid:str) -> requests.models.Response:
@@ -78,7 +82,6 @@ class slmClient():
         return res
 
 
-
     def create_resource(self, uuid:str, item) -> requests.models.Response:
         """Creates the resource for the given uuid
 
@@ -108,14 +111,13 @@ class slmClient():
         return res
 
 
-
-    def add_capabilities(self, uuid:str, capabilities: list) -> requests.models.Response:
+    def add_capabilities(self, uuid:str, capabilities: list, overwrite:bool) -> requests.models.Response:
         """adds given capabilties to resource by given uuid
 
         Args:
             uuid (str): the resource to add the capabilities
             capabilities (list): a list of capabilities
-            item (_type_): the resource item
+            overwrite (bool): determines if an already registered capabilty is overwritten
 
         Returns:
             requests.models.Response: the raw http response
@@ -124,34 +126,85 @@ class slmClient():
 
             capability_options = ["SHELL", "DOCKER", "TRANSFERAPP", "DOCKER_SWARM", "K3S"]
 
+            # prepare requets
+            headers = {
+                'Authorization': self.token,
+                'Realm': 'fabos'
+            }
+
+            # get already registered capability of given resource
+            res_get = requests.get(
+                url=f"{self.host_resource_registry}/resources/{uuid}/deployment-capabilities",
+                headers=headers
+            )
+
+            # iterate through given capability candidates given
             for capability in capabilities:
 
+                # filter if capability candidate is valid, else skip adding
                 if capability in capability_options:
 
-                    headers = {
-                        'Authorization': self.token,
-                        'Realm': 'fabos'
-                    }
-                    res = requests.put(
-                        url=f"{self.host_resource_registry}/resources/{uuid}/deployment-capabilities?deploymentCapability={capability}",
-                        headers=headers
-                    )
+                    if len(res_get.json()) < 1:
 
-                    if res.status_code in [200, 201]:
-                        print(f"SUCCESS({res.status_code}): added capability '{capability}' for resource '{uuid}'")
+                        print(f"Adding capability '{capability}' to resource '{uuid}'. Since resource has no capabilities yet")
+                        res = self.add_capability(uuid=uuid, capability=capability)
+
                     else:
-                        print(f"FAILED({res.status_code}): adding capability '{capability}' for resource '{uuid}'")
-                        print(res.text)
+                        # parse fetched capabilties
+                        parsed_available_capabilities = [ item['name'] for item in res_get.json()] 
+
+                        # add capability if already is registered but overwirte is True
+                        if (capability in parsed_available_capabilities) and overwrite:
+                            print(f"OVERWRITE: adding capability '{capability}' to resource '{uuid}'. Overwriting already available capbility!")
+                            res = self.add_capability(uuid=uuid, capability=capability)
+
+                        # add capability if specific capability is not already registered
+                        elif capability not in parsed_available_capabilities:
+                            print(f"Adding capability '{capability}' to resource '{uuid}'. Since resource has the capability not yet!")
+                            res = self.add_capability(uuid=uuid, capability=capability)
+
+                        # skip adding capbility
+                        else:
+                            print(f"SKIP: skipping adding capability '{capability}' to resource '{uuid}'. Since it already has the capbility and FORCE_OVERWRITE is not given!") 
+                            res = None
 
                 else:
-                    print(f"FAILED: capability '{capability}' not in {capability_options}. Skipping ...")
+                    print(f"FAILED: capability '{capability}' not in available options {capability_options}. Skipping ...")
                     return None
             return res
 
         else:
-            print(f"SUCCESS: capabilities skipped since no are given ...")
+            print(f"SKIP: adding capabilities skipped for resource '{uuid}' since no are given ...")
             return None
 
+    def add_capability(self, uuid: str, capability: str) -> requests.models.Response:
+        """Adds capability to resource
+
+        Args:
+            uuid (str): the uuid of the resource as str
+            capability (str): the capability of the resource as str
+
+        Returns:
+            requests.models.Response: the raw request response OR None if failed
+        """
+
+        headers = {
+            'Authorization': self.token,
+            'Realm': 'fabos'
+        }
+
+        res = requests.put(
+            url=f"{self.host_resource_registry}/resources/{uuid}/deployment-capabilities?deploymentCapability={capability}",
+            headers=headers
+        )
+
+        if res.status_code in [200, 201]:
+            print(f"SUCCESS({res.status_code}): added capability '{capability}' for resource '{uuid}'")
+            return res
+        else:
+            print(f"FAILED({res.status_code}): adding capability '{capability}' for resource '{uuid}'")
+            print(res.text)
+            return None
 
 
     def get_resources(self) -> list:
@@ -176,7 +229,6 @@ class slmClient():
             print(f"FAILED({res.status_code}): getting resources failed")
 
         return res.json()
-
 
 
     def get_resource(self, uuid:str) -> object:
@@ -204,5 +256,3 @@ class slmClient():
         else:
             print(f"FAILED({res.status_code}): could not found resource '{uuid}' in registry")
             return {}
-
-        

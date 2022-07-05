@@ -2,17 +2,16 @@ version: "3.9"
 services:
 
   resource-registry-init:
-    # restart: unless-stopped
-    # privileged: true
     build: 
       context: .
       dockerfile: Dockerfile
-    # image: hub.cc-asp.fraunhofer.de/fabos_demo_cubes/pi-stepper-cube:latest
     container_name: resource-registry-init
     volumes:
       - "./RACK2022.xlsx:/RACK2022.xlsx"
     environment:
       SLM_HOST: "http://192.168.153.47"
+      SLM_USER: "fabos"
+      SLM_PASSWORD: "password"
       XLSX_FILE: "/RACK2022.xlsx"
       SHEET_NAME: "DEVICES"
       FORCE_OVERWRITE: "False"

@@ -16,7 +16,6 @@ RUN apt-get install -y --no-install-recommends gcc python-dev\
 COPY setup.py /
 COPY slmClient.py /
 COPY utils.py /
-# COPY setup.py /
 
 # Trigger Python script
 CMD ["python", "-u", "./setup.py"]

@@ -1,5 +1,3 @@
-import pandas as pd
-import json
 import requests
 
 
@@ -12,6 +10,13 @@ DEFAULT_RESOURCE_ITEM = {
     "sshAccessAvailable": True
 }
 
+CAPABILITY_NAME_TO_ID = {
+    "DOCKER": "08c5b8de-5d4a-4116-a73f-1d1f616c7c70",
+    "TRANSFERAPP": "110d43ff-f351-4e55-92c0-77625875ce6e",
+    "DOCKER_SWARM": "5dcb8fc8-556b-4735-9c80-fce546e7bd7a",
+    "K3S": "21afb100-01f9-4915-9c8c-bf9afc032c01",
+    "KUBERNETES": "a2ae8818-09ae-4e86-8e5a-2effb1122fa6"
+}
 
 class slmClient():
     """A client class for interaction with the SLM
@@ -70,7 +75,7 @@ class slmClient():
             url=f"{self.host_resource_registry}/resources/{uuid}",
             headers=headers
             #data={
-            #    
+            #
             #},
         )
 
@@ -124,7 +129,7 @@ class slmClient():
         """
         if capabilities:
 
-            capability_options = ["SHELL", "DOCKER", "TRANSFERAPP", "DOCKER_SWARM", "K3S"]
+            capability_options = ["DOCKER", "TRANSFERAPP", "DOCKER_SWARM", "K3S"]
 
             # prepare requets
             headers = {
@@ -151,7 +156,7 @@ class slmClient():
 
                     else:
                         # parse fetched capabilties
-                        parsed_available_capabilities = [ item['name'] for item in res_get.json()] 
+                        parsed_available_capabilities = [ item['name'] for item in res_get.json()]
 
                         # add capability if already is registered but overwirte is True
                         if (capability in parsed_available_capabilities) and overwrite:
@@ -165,7 +170,7 @@ class slmClient():
 
                         # skip adding capbility
                         else:
-                            print(f"SKIP: skipping adding capability '{capability}' to resource '{uuid}'. Since it already has the capbility and FORCE_OVERWRITE is not given!") 
+                            print(f"SKIP: skipping adding capability '{capability}' to resource '{uuid}'. Since it already has the capbility and FORCE_OVERWRITE is not given!")
                             res = None
 
                 else:
@@ -193,8 +198,9 @@ class slmClient():
             'Realm': 'fabos'
         }
 
+        capabilityId = CAPABILITY_NAME_TO_ID[capability]
         res = requests.put(
-            url=f"{self.host_resource_registry}/resources/{uuid}/deployment-capabilities?deploymentCapability={capability}",
+            url=f"{self.host_resource_registry}/resources/{uuid}/capabilities?capabilityId={capabilityId}",
             headers=headers
         )
 

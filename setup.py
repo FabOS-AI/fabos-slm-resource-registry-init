@@ -1,12 +1,12 @@
 import os
 import time
 import json
-import requests
-import pandas as pd
-from slmClient import *
-from utils import *
 from argparse import ArgumentParser
 
+import pandas as pd
+
+from slmClient import *
+from utils import *
 
 # read variables from environment or use defaults
 SLM_HOST = str(os.getenv("SLM_HOST", "http://192.168.153.47"))
@@ -65,13 +65,13 @@ def main(args):
 
     # get slm client instance
     slm = slmClient(
-        host=SLM_HOST, 
-        host_keycloak=KEYCLOAK_HOST, 
+        host=SLM_HOST,
+        host_keycloak=KEYCLOAK_HOST,
         host_resource_registry=RESOURCE_REGISTRY_HOST,
         slm_user=SLM_USER,
         slm_password=SLM_PASSWORD
     )
-    
+
     # setup empty summary cache arrays
     resources_added = []
     resources_accessible = []
@@ -117,7 +117,7 @@ def main(args):
                 # ping hostname
                 if not ping(device_resource_item['resourceHostname']):
                         print(f"WARNING: Device '{row['UUID']}' with hostname '{device_resource_item['resourceHostname']}' is not available via PING!")
-                
+
                 # additional IP ping test
                 if not ping(device_resource_item["resourceIp"]):
                         print(f"ERROR: Device '{row['UUID']}' with IP '{device_resource_item['resourceIp']}' is not available via PING. Aborting setup!")
@@ -135,7 +135,7 @@ def main(args):
         else:
                 print(slm.create_resource(uuid=row["UUID"], item=device_resource_item))
                 resources_added.append(f"{row['UUID']}, {device_resource_item['resourceHostname']}, {device_resource_item['resourceIp']}")
-        
+
         # print("pause for registry to breath")
         # time.sleep(1)
         print("------------------------------------------------------------------------")
@@ -144,7 +144,7 @@ def main(args):
     if len(resources_added)  > 0:
         print("pause for registry to breath (long - 20s) ... will continue with adding capabilities\n------------------------------------------------------------------------")
         time.sleep(20)
-    
+
 
     print(f"\nChecking available resources:----------------------------------------------------------------------------------------------")
     resources_current = [resource["id"] for resource in slm.get_resources()]
@@ -182,7 +182,7 @@ def main(args):
                         capabilities=capabilities,
                         overwrite=(args.force) or (FORCE_OVERWRITE == 'True')
                 )
-                
+
                 # only add capabilties to list if result is provided (implies that request succeeded)
                 if res:
                         print(res)
@@ -202,7 +202,7 @@ def main(args):
     print(f"Capabilities added to resources (via REST): {json.dumps(resources_capabilities_added, indent=2)}")
     print("Resource Registry Setup Done!")
     print(f"Took: {(time.time()-start_time):.2f}s")
-    
+
 
 if __name__ == "__main__":
 

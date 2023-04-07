@@ -110,9 +110,12 @@ def main(args):
         # create data item based on defaults
         device_resource_item = DEFAULT_RESOURCE_ITEM.copy()
         device_resource_item["resourceIp"] = row["eth0 IP"] if row["eth0 IP"]!="-" else row["eth1 IP"]
-        device_resource_item["resourceUsername"] = row["user"]
-        device_resource_item["resourcePassword"] = row["password"]
         device_resource_item['resourceHostname'] = row["hostname"]
+        if row["connection-type"] != "-":
+	       device_resource_item["resourceUsername"] = row["user"]
+               device_resource_item["resourcePassword"] = row["password"]
+               device_resource_item['resourceConnectionType'] = row["connection-type"]
+               device_resource_item['resourceConnectionPort'] = round(row["connection-port"])
 
         if "resourceConnectionPort" in row.keys():
                device_resource_item["resourceConnectionPort"] = row["resourceConnectionPort"]
@@ -177,6 +180,8 @@ def main(args):
 
         # parse capabilities
         capabilities = []
+        if "DC_Dummy" in row.keys() and row["DC_Dummy"] == "yes":
+                capabilities.append("DUMMY")
         if "DC_Docker" in row.keys() and row["DC_Docker"] == "yes":
                 capabilities.append("DOCKER")
         if "DC_Transferapp" in row.keys() and row["DC_Transferapp"] == "yes":

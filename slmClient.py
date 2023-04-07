@@ -4,13 +4,11 @@ import requests
 DEFAULT_RESOURCE_ITEM = {
     "resourceHostname": "",
     "resourceIp": "",
-    "resourceUsername": "",
-    "resourcePassword": "",
-    "checkResource": False,
-    "sshAccessAvailable": True
+    "resourceConnectionPort": 0
 }
 
 CAPABILITY_NAME_TO_ID = {
+    "DUMMY" : "2c8cafe5-1155-471c-9639-0db48ec249eb",
     "DOCKER": "08c5b8de-5d4a-4116-a73f-1d1f616c7c70",
     "TRANSFERAPP": "110d43ff-f351-4e55-92c0-77625875ce6e",
     "DOCKER_SWARM": "5dcb8fc8-556b-4735-9c80-fce546e7bd7a",
@@ -129,7 +127,7 @@ class slmClient():
         """
         if capabilities:
 
-            capability_options = ["DOCKER", "TRANSFERAPP", "DOCKER_SWARM", "K3S"]
+            capability_options = ["DUMMY", "DOCKER", "TRANSFERAPP", "DOCKER_SWARM", "K3S"]
 
             # prepare requets
             headers = {

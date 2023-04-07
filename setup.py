@@ -1,6 +1,7 @@
 import os
 import time
 import json
+import uuid
 from argparse import ArgumentParser
 
 import pandas as pd
@@ -20,6 +21,7 @@ FORCE_OVERWRITE = os.getenv("FORCE_OVERWRITE", "False")
 FORCE_DELETE = os.getenv("FORCE_DELETE", "False")
 DELETE_ALL = os.getenv("DELETE_ALL", "False")
 PING_CHECK = os.getenv("PING_CHECK", "False")
+GENERATE_UUID = os.getenv("GENERATE_UUID", "False")
 
 # print variables
 print("RESOURCE REGISTRY INIT: CONFIG SUMMARY (environment or defaults) ----------------------------------------------------------")
@@ -34,6 +36,7 @@ print("FORCE_OVERWRITE: ", FORCE_OVERWRITE)
 print("FORCE_DELETE: ", FORCE_DELETE)
 print("DELETE_ALL: ", DELETE_ALL)
 print("PING_CHECK: ", PING_CHECK)
+print("GENERATE_UUID: ", GENERATE_UUID)
 print("RESOURCE REGISTRY INIT:----------------------------------------------------------------------------------------------------")
 
 
@@ -111,6 +114,12 @@ def main(args):
         device_resource_item["resourcePassword"] = row["password"]
         device_resource_item['resourceHostname'] = row["hostname"]
 
+        if "resourceConnectionPort" in row.keys():
+               device_resource_item["resourceConnectionPort"] = row["resourceConnectionPort"]
+        if "resourceConnectionType" in row.keys():
+               device_resource_item["resourceConnectionType"] = row["resourceConnectionType"]
+               
+
         # check if hostname is available, IF PING_CHECK is set
         if PING_CHECK == "True":
 
@@ -133,9 +142,10 @@ def main(args):
                 else:
                         print(f"WARNING: skipped overwriting resource '{row['UUID']}' since parameter '-f' was not given!")
         else:
-                print(slm.create_resource(uuid=row["UUID"], item=device_resource_item))
-                resources_added.append(f"{row['UUID']}, {device_resource_item['resourceHostname']}, {device_resource_item['resourceIp']}")
-
+                uuid_str = str(uuid.uuid4()) if GENERATE_UUID == "True" else row['UUID']
+                print(slm.create_resource(uuid=uuid_str, item=device_resource_item))
+                resources_added.append(f"{uuid_str}, {device_resource_item['resourceHostname']}, {device_resource_item['resourceIp']}")
+        
         # print("pause for registry to breath")
         # time.sleep(1)
         print("------------------------------------------------------------------------")

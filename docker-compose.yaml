@@ -18,6 +18,7 @@ services:
       FORCE_DELETE: "False"
       DELETE_ALL: "False"
       PING_CHECK: "False"
+      GENERATE_UUID: "False"
 
 
 

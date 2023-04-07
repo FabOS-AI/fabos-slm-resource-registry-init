@@ -219,6 +219,10 @@ class slmClient():
         Returns:
             list: list of resource
         """
+        
+        print("refreshing token")
+        self.token = f"Bearer {self.get_keycloak_token()}"
+        print("token refreshed")
 
         headers = {
             'Authorization': self.token,

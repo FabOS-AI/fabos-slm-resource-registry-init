@@ -1,4 +1,5 @@
 import os
+import glob
 import time
 import json
 import uuid
@@ -58,15 +59,37 @@ def main(args):
         args (argparse arguments): the parsed args
     """
 
+    print(f"\nLoading data (XLSX_FILE='{XLSX_FILE}', SHEET_NAME='{SHEET_NAME}') ----------------------------------------------------------")
     # check if EXCEL file exists
     if not os.path.exists(XLSX_FILE):
         print(f"ERORR: file '{XLSX_FILE}' does not exist. Please either add the file or change environment variable 'XLSX_FILE' accordingly!")
         exit(1)
     # read file, and only use resources
-    df = pd.read_excel(XLSX_FILE, sheet_name=SHEET_NAME)
-    df_devices = df[df['is_resource']=="yes"]
+    sheet_names = pd.ExcelFile(XLSX_FILE).sheet_names 
+    
+    if SHEET_NAME in sheet_names:
+        df = pd.read_excel(XLSX_FILE, sheet_name=SHEET_NAME)
+        df_devices = df[df['is_resource']=="yes"]
+        print(f"Loaded '{len(df_devices)}' devices from sheet '{SHEET_NAME}' in file '{XLSX_FILE}'")
+    else:
+        print("ERORR: sheet name '{SHEET_NAME}' does not exist in file '{XLSX_FILE}'. Cannot process device data!")
 
-    # get slm client instance
+    if "LOCATIONS" in sheet_names:
+        df_locations = pd.read_excel(XLSX_FILE, sheet_name="LOCATIONS")
+        print(f"Loaded '{len(df_locations)}' devices from sheet 'LOCATIONS' in file '{XLSX_FILE}'")
+    else:
+        print("ERORR: sheet name 'LOCATIONS' does not exist in file '{XLSX_FILE}'. Cannot process location data!")    
+
+    # setup empty summary cache arrays
+    resources_added = []
+    resources_accessible = []
+    resources_capabilities_added = []
+    resources_deleted = []
+    locations_added = []
+    aasxs_added = []
+
+    # get current state
+    print("\nFetching current state (resources, locations) ----------------------------------------------------------")
     slm = slmClient(
         host=SLM_HOST,
         host_keycloak=KEYCLOAK_HOST,
@@ -74,12 +97,22 @@ def main(args):
         slm_user=SLM_USER,
         slm_password=SLM_PASSWORD
     )
+    locations_current = slm.get_locations()
+    resources_current = [resource["id"] for resource in slm.get_resources()]
 
-    # setup empty summary cache arrays
-    resources_added = []
-    resources_accessible = []
-    resources_capabilities_added = []
-    resources_deleted = []
+    # add locations
+    if DELETE_ALL == 'True':
+        print(f"\nStarting locations clean up (DELETE_ALL={DELETE_ALL}):---------------------------------------------------------------------------------------")
+        for location_item in locations_current:
+              slm.delete_location(uuid=location_item['id'])
+    
+    if len(df_locations) > 0:
+        print(f"\nStarting adding locations (in total '{len(df_locations)}' locations):---------------------------------------------------------------")
+        for index, row in df_locations.iterrows():
+                if slm.create_location(row["UUID"], row["Name"]):
+                        locations_added.append(f'{row["Name"]} ({row["UUID"]})')
+    locations_current = [location["id"] for location in slm.get_locations()] 
+
 
 
     # start with deleting all (currently available) resources, IF FORCE_DELETE is set
@@ -111,16 +144,17 @@ def main(args):
         device_resource_item = DEFAULT_RESOURCE_ITEM.copy()
         device_resource_item["resourceIp"] = row["eth0 IP"] if row["eth0 IP"]!="-" else row["eth1 IP"]
         device_resource_item['resourceHostname'] = row["hostname"]
-        if row["connection-type"] != "-":
-	       device_resource_item["resourceUsername"] = row["user"]
-               device_resource_item["resourcePassword"] = row["password"]
-               device_resource_item['resourceConnectionType'] = row["connection-type"]
-               device_resource_item['resourceConnectionPort'] = round(row["connection-port"])
 
-        if "resourceConnectionPort" in row.keys():
-               device_resource_item["resourceConnectionPort"] = row["resourceConnectionPort"]
-        if "resourceConnectionType" in row.keys():
-               device_resource_item["resourceConnectionType"] = row["resourceConnectionType"]
+        if row["connection-type"] != "-":
+                device_resource_item["resourceUsername"] = row["user"]
+                device_resource_item["resourcePassword"] = row["password"]
+                device_resource_item['resourceConnectionType'] = row["connection-type"]
+                device_resource_item['resourceConnectionPort'] = round(row["connection-port"])
+        
+        if row["location-uuid"]:
+              device_resource_item["resourceLocation"] = row["location-uuid"]
+              if not row["location-uuid"] in locations_current:
+                    print(f"WARNING: Location uuid '{row['location-uuid']}' for resource '{device_resource_item['resourceHostname']}' not registered yet... But proceed adding resource")
                
 
         # check if hostname is available, IF PING_CHECK is set
@@ -150,13 +184,13 @@ def main(args):
                 resources_added.append(f"{uuid_str}, {device_resource_item['resourceHostname']}, {device_resource_item['resourceIp']}")
         
         # print("pause for registry to breath")
-        # time.sleep(1)
+        time.sleep(0.3)
         print("------------------------------------------------------------------------")
 
     # only wait if resources were added, else continue direclty
     if len(resources_added)  > 0:
-        print("pause for registry to breath (long - 20s) ... will continue with adding capabilities\n------------------------------------------------------------------------")
-        time.sleep(20)
+        print("pause for registry to breath (long - 10s) ... will continue with adding capabilities\n------------------------------------------------------------------------")
+        time.sleep(10)
 
 
     print(f"\nChecking available resources:----------------------------------------------------------------------------------------------")
@@ -191,6 +225,11 @@ def main(args):
         if "DC_K3S" in row.keys() and row["DC_K3S"] == "yes":
                 capabilities.append("K3S")
 
+        if not len(capabilities) > 0:
+                print(f"WARN: no capabilities parse for resource '{row['UUID']}'. Will skip call to add ...")      
+                print("------------------------------------------------------------------------")
+                continue
+
         if row["UUID"] in resources_current:
                 res = slm.add_capabilities(
                         uuid=row["UUID"],
@@ -205,16 +244,51 @@ def main(args):
         else:
                 print(f"FAILED: cannot add capabilities to resource {row['UUID']} since it is not registered at the registry (yet). Skipping...")
 
-        # print("pause for registry to breath")
-        # time.sleep(1)
+        print("pause for registry to breath (long - 5s) ... will continue with adding aasx submodels\n------------------------------------------------------------------------")
+        time.sleep(5)
+
+    print(f"\nStarting adding aasx submodels:----------------------------------------------------------------------------------------------")
+    resources_current = [resource["id"] for resource in slm.get_resources()]
+    aasx_files = glob.glob("/files/*.aasx")
+    print(f"Found '{len(aasx_files)}' AASX file(s) for filter '/files/*.aasx' ...\n")
+
+    for index, row in df_devices.iterrows():
+
+        # parse aasx files
+
+        capabilities = []
+        if "aasx-filter-substring" in row.keys() and len(str(row["aasx-filter-substring"])) > 0 and str(row["aasx-filter-substring"]) != "nan":
+                paths = [aasx_path for aasx_path in aasx_files if str(row["aasx-filter-substring"]) in aasx_path]
+                files = [("aasx", open(path, 'rb')) for path in paths]
+                print(f"Found '{len(paths)}' aasx files matching given filter substring '{str(row['aasx-filter-substring'])}' for resource '{row['UUID']}' ...")
+
+        else:
+                print(f"WARN: no aasx files filter (aasx-filter-substring) available for for resource '{row['UUID']}'. Will skip to add submodels ...")      
+                print("------------------------------------------------------------------------")
+                continue
+
+        if row["UUID"] in resources_current:
+                res = slm.add_submodels(
+                        uuid=row["UUID"],
+                        files=files
+                )
+
+                # only add submodels to list if result is provided (implies that request succeeded)
+                if res:
+                        aasxs_added.append(f"{row['UUID']}, {files}")
+        else:
+                print(f"FAILED: cannot add aasx submodels to resource {row['UUID']} since it is not registered at the registry (yet). Skipping...")
         print("------------------------------------------------------------------------")
+        
 
     # finish
     print("\nSUMMARY -------------------------------------------------------------------------------------------------------------------")
     print(f"Resources deleted (via REST): {json.dumps(resources_deleted, indent=2)}")
     print(f"Resources accessible (via ping): {json.dumps(resources_accessible, indent=2)}")
+    print(f"Locations added to registry (via REST): {json.dumps(locations_added, indent=2)}")
     print(f"Resources added to registry (via REST): {json.dumps(resources_added, indent=2)}")
     print(f"Capabilities added to resources (via REST): {json.dumps(resources_capabilities_added, indent=2)}")
+    print(f"AAS submodels added to resources (via REST): {json.dumps(aasxs_added, indent=2)}")
     print("Resource Registry Setup Done!")
     print(f"Took: {(time.time()-start_time):.2f}s")
 

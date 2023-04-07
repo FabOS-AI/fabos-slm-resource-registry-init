@@ -56,6 +56,15 @@ The easiest usage is through the provided Docker/Compose implementation. The con
     ```
     If you use an older version of docker, try `docker-compose up --build`
 
+
+## AASX upload
+
+1. put your AASX files into the `/files` subdirectory:
+
+2. use the `/files` property to filter the AASX files in the directory for every resource
+
+  Hint: AASX files will only be uploaded when resource exists
+
 ## Outlook 
 
 In the future the idea is to integrate the init procedure into the SLM base setup. Additionally a "resource wizard" could provide the same functionality in the UI of the SLM, adding the resources based on an EXCEL.

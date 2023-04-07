@@ -7,16 +7,16 @@ services:
       dockerfile: Dockerfile
     container_name: resource-registry-init
     volumes:
-      - "./:/files"
+      - "./files:/files"
     environment:
       SLM_HOST: "http://192.168.153.47"
       SLM_USER: "fabos"
       SLM_PASSWORD: "password"
       XLSX_FILE: "/files/example.xlsx"
       SHEET_NAME: "DEVICES"
-      FORCE_OVERWRITE: "False"
-      FORCE_DELETE: "False"
-      DELETE_ALL: "False"
+      FORCE_OVERWRITE: "True"
+      FORCE_DELETE: "True"
+      DELETE_ALL: "True"
       PING_CHECK: "False"
       GENERATE_UUID: "False"
 

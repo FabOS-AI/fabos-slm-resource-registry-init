@@ -109,7 +109,7 @@ class slmClient():
         if res.status_code in [200, 201]:
             print(f"SUCCESS({res.status_code}): added resource '{uuid}' with config: {item}")
         else:
-            print(f"FAILED({res.status_code}): added resource '{uuid}' with config: {item}")
+            print(f"FAILED({res.status_code}): added resource '{uuid}' with config: {item}: Response: {res.json()}")
 
         return res
 
@@ -210,6 +210,36 @@ class slmClient():
             print(res.text)
             return None
 
+    def add_submodels(self, uuid: str, files: list) -> requests.models.Response:
+        """Adds AAS submodels to resource
+
+        Args:
+            uuid (str): the uuid of the resource as str
+            files (dict): a files dict of AASX file to add to the resource
+
+        Returns:
+            requests.models.Response: the raw request response OR None if failed
+        """
+
+        headers = {
+            'Authorization': self.token,
+            'Realm': 'fabos'
+        }
+
+
+        res = requests.post(
+            url=f"{self.host_resource_registry}/resources/{uuid}/submodels",
+            files=files,
+            headers=headers
+        )
+
+        if res.status_code in [200, 201]:
+            print(f"SUCCESS({res.status_code}): added files '{files}' for resource '{uuid}'")
+            return res
+        else:
+            print(f"FAILED({res.status_code}): adding files '{files}' for resource '{uuid}'")
+            print(res.text)
+            return None
 
     def get_resources(self) -> list:
         """Gets all resource from resource registry
@@ -264,3 +294,77 @@ class slmClient():
         else:
             print(f"FAILED({res.status_code}): could not found resource '{uuid}' in registry")
             return {}
+
+    def create_location(self, uuid:str, name:str) -> requests.models.Response:
+        """Creates the location with the given uuid
+
+        Args:
+            uuid (str): the uuid of the location to be created
+            name (str): the name of the location to be created
+
+        Returns:
+            requests.models.Response: the raw HTTP response
+        """
+
+        headers = {
+            'Authorization': self.token,
+            'Realm': 'fabos'
+        }
+        res = requests.post(
+            url=f"{self.host_resource_registry}/resources/locations?id={uuid}&name={name}",
+            headers=headers
+        )
+
+        if res.status_code in [200, 201]:
+            print(f"SUCCESS({res.status_code}): added location '{name}' ({uuid})")
+        else:
+            print(f"FAILED({res.status_code}): adding location '{name}' ({uuid})")
+        return res
+    
+    def delete_location(self, uuid:str) -> requests.models.Response:
+        """Deletes the location with the given uuid
+
+        Args:
+            uuid (str): the uuid of the location to be deleted
+
+        Returns:
+            requests.models.Response: the raw HTTP response
+        """
+
+        headers = {
+            'Authorization': self.token,
+            'Realm': 'fabos'
+        }
+        res = requests.delete(
+            url=f"{self.host_resource_registry}/resources/locations?id={uuid}",
+            headers=headers
+        )
+
+        if res.status_code in [200, 201]:
+            print(f"SUCCESS({res.status_code}): delete location '{uuid}'")
+        else:
+            print(f"FAILED({res.status_code}): adding location '{uuid}'")
+        return res
+    
+    def get_locations(self) -> list:
+        """Gets all locations from resource registry
+
+        Returns:
+            list: list of locations
+        """
+
+        headers = {
+            'Authorization': self.token,
+            'Realm': 'fabos'
+        }
+        res = requests.get(
+            url=f"{self.host_resource_registry}/resources/locations",
+            headers=headers
+        )
+
+        if res.status_code in [200, 201]:
+            print(f"SUCCESS({res.status_code}): found '{len(res.json())}' location items")
+        else:
+            print(f"FAILED({res.status_code}): getting locations failed")
+
+        return res.json()

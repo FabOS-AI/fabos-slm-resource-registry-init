@@ -28,11 +28,16 @@ The easiest usage is through the provided Docker/Compose implementation. The con
 1. Add your resources, in the simplest way to the provided `example.xlsx`. Definitely required fields in the EXCEL are (per device):
    - "Device": an arbitrary device name, for easier reference
    - "user": the user name of the resource, in order to be accessed
-   - "password": the password of the corresponding user
-   - "hostname": the hostname of the resource
+   - a connection to the resource, in order to be accessed. Will only be added if "connection-type" different from "-" and contains:
+     - "password": the password of the corresponding user
+     - "hostname": the hostname of the resource
+     - "connection-type": the connection type (typically one of: ssh, win-ssh, WinRm, http, tcp)
+     - "connection-port": the port used for the connection-type
    - either "eth0 IP" or "eth1 IP": the IP of the resource, eth0 is always prefered
    - "is_resource" flage: determines if device is added to the resource registry. Set to "yes" in order to be added
    - "UUID": the UUID of the resource, can be generated externally
+   - "location-uuid": the UUID of the location, where the resource is located
+   - "aasx-filter-substring": a substring that is used to filter given AASX files in `/files` directory (see [AASX upload](#aasx-upload) )
    - capabilities to install:
      - "DC_Docker": if set to "yes", Docker capability will be added to resource
      - "DC_Transferapp": if set to "yes", Transferapp capability will be added to resource
@@ -61,9 +66,14 @@ The easiest usage is through the provided Docker/Compose implementation. The con
 
 1. put your AASX files into the `/files` subdirectory:
 
+![image](https://user-images.githubusercontent.com/27732414/230616565-2aee9cba-4e64-4d94-b983-b06798c13f15.png)
+
 2. use the `/files` property to filter the AASX files in the directory for every resource
 
-  Hint: AASX files will only be uploaded when resource exists
+![image](https://user-images.githubusercontent.com/27732414/230616752-ba1f2546-6055-4e49-a0fb-1fb580a67c54.png)
+
+
+  **Hint:** AASX files will only be uploaded when resource exists in resource registry
 
 ## Outlook 
 

@@ -8,6 +8,7 @@ DEFAULT_RESOURCE_ITEM = {
 }
 
 CAPABILITY_NAME_TO_ID = {
+    "BASE" : "????",
     "DUMMY" : "2c8cafe5-1155-471c-9639-0db48ec249eb",
     "DOCKER": "08c5b8de-5d4a-4116-a73f-1d1f616c7c70",
     "TRANSFERAPP": "110d43ff-f351-4e55-92c0-77625875ce6e",
@@ -105,6 +106,11 @@ class slmClient():
             data=item,
             headers=headers
         )
+
+        if item["resourceBaseConfiguration"]:
+            item["resourceBaseConfiguration"] = CAPABILITY_NAME_TO_ID["BASE"]
+        else:
+            del item["resourceBaseConfiguration"]
 
         if res.status_code in [200, 201]:
             print(f"SUCCESS({res.status_code}): added resource '{uuid}' with config: {item}")

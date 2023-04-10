@@ -104,13 +104,13 @@ def main(args):
     if DELETE_ALL == 'True':
         print(f"\nStarting locations clean up (DELETE_ALL={DELETE_ALL}):---------------------------------------------------------------------------------------")
         for location_item in locations_current:
-              slm.delete_location(uuid=location_item['id'])
+            slm.delete_location(uuid=location_item['id'])
     
     if len(df_locations) > 0:
         print(f"\nStarting adding locations (in total '{len(df_locations)}' locations):---------------------------------------------------------------")
         for index, row in df_locations.iterrows():
-                if slm.create_location(row["UUID"], row["Name"]):
-                        locations_added.append(f'{row["Name"]} ({row["UUID"]})')
+            if slm.create_location(row["UUID"], row["Name"]):
+                locations_added.append(f'{row["Name"]} ({row["UUID"]})')
     locations_current = [location["id"] for location in slm.get_locations()] 
 
 
@@ -120,16 +120,16 @@ def main(args):
         print(f"\nStarting resource clean up (DELETE_ALL={DELETE_ALL}, FORCE_DELETE={FORCE_DELETE}):-----------------------------------------------------------")
         for resource in slm.get_resources():
 
-                # ensure resource will be added again, skip this if DELETE_ALL is set to True
-                if DELETE_ALL == 'True':
-                        slm.delete_resource(uuid=resource["id"])
-                        resources_deleted.append(f"{resource['id']}, {resource['hostname']}, {resource['ip']}")
+            # ensure resource will be added again, skip this if DELETE_ALL is set to True
+            if DELETE_ALL == 'True':
+                slm.delete_resource(uuid=resource["id"])
+                resources_deleted.append(f"{resource['id']}, {resource['hostname']}, {resource['ip']}")
+            else:
+                if resource["id"] in df["UUID"].tolist():
+                    slm.delete_resource(uuid=resource["id"])
+                    resources_deleted.append(f"{resource['id']}, {resource['hostname']}, {resource['ip']}")
                 else:
-                        if resource["id"] in df["UUID"].tolist():
-                                slm.delete_resource(uuid=resource["id"])
-                                resources_deleted.append(f"{resource['id']}, {resource['hostname']}, {resource['ip']}")
-                        else:
-                                print(f"Skipped deleting resource '{resource['id']}' since it is not in source file '{XLSX_FILE}'")
+                    print(f"Skipped deleting resource '{resource['id']}' since it is not in source file '{XLSX_FILE}'")
 
         print("pause for registry to breath (long - 5s) ... will continue with adding resources\n------------------------------------------------------------------------")
         time.sleep(5)
@@ -146,42 +146,45 @@ def main(args):
         device_resource_item['resourceHostname'] = row["hostname"]
 
         if row["connection-type"] != "-":
-                device_resource_item["resourceUsername"] = row["user"]
-                device_resource_item["resourcePassword"] = row["password"]
-                device_resource_item['resourceConnectionType'] = row["connection-type"]
-                device_resource_item['resourceConnectionPort'] = round(row["connection-port"])
+            device_resource_item["resourceUsername"] = row["user"]
+            device_resource_item["resourcePassword"] = row["password"]
+            device_resource_item['resourceConnectionType'] = row["connection-type"]
+            device_resource_item['resourceConnectionPort'] = round(row["connection-port"])
         
         if row["location-uuid"]:
-              device_resource_item["resourceLocation"] = row["location-uuid"]
-              if not row["location-uuid"] in locations_current:
-                    print(f"WARNING: Location uuid '{row['location-uuid']}' for resource '{device_resource_item['resourceHostname']}' not registered yet... But proceed adding resource")
+            device_resource_item["resourceLocation"] = row["location-uuid"]
+            if not row["location-uuid"] in locations_current:
+                print(f"WARNING: Location uuid '{row['location-uuid']}' for resource '{device_resource_item['resourceHostname']}' not registered yet... But proceed adding resource")
+
+        # add flag for install of BaseConfigCapability (aka. FabOS Device Capability) - True/False
+        device_resource_item['resourceBaseConfiguration'] = "DC_Base" in row.keys() and row["DC_Base"] == "yes"
                
 
         # check if hostname is available, IF PING_CHECK is set
         if PING_CHECK == "True":
 
-                # ping hostname
-                if not ping(device_resource_item['resourceHostname']):
-                        print(f"WARNING: Device '{row['UUID']}' with hostname '{device_resource_item['resourceHostname']}' is not available via PING!")
+           # ping hostname
+           if not ping(device_resource_item['resourceHostname']):
+                print(f"WARNING: Device '{row['UUID']}' with hostname '{device_resource_item['resourceHostname']}' is not available via PING!")
 
-                # additional IP ping test
-                if not ping(device_resource_item["resourceIp"]):
-                        print(f"ERROR: Device '{row['UUID']}' with IP '{device_resource_item['resourceIp']}' is not available via PING. Aborting setup!")
-                        break
-                resources_accessible.append(f"{row['UUID']}, {device_resource_item['resourceHostname']}, {device_resource_item['resourceIp']}")
+           # additional IP ping test
+           if not ping(device_resource_item["resourceIp"]):
+                print(f"ERROR: Device '{row['UUID']}' with IP '{device_resource_item['resourceIp']}' is not available via PING. Aborting setup!")
+                break
+           resources_accessible.append(f"{row['UUID']}, {device_resource_item['resourceHostname']}, {device_resource_item['resourceIp']}")
 
         # if resource already exists, check the FORCE_OVERWRITE argument, else create directly
         if row['UUID'] in resources_current:
-                if (args.force) or (FORCE_OVERWRITE == 'True'):
-                        print(f"WARNING: overwriting resource '{row['UUID']}' since it already exists")
-                        print(slm.create_resource(uuid=row["UUID"], item=device_resource_item))
-                        resources_added.append(f"{row['UUID']}, {device_resource_item['resourceHostname']}, {device_resource_item['resourceIp']}")
-                else:
-                        print(f"WARNING: skipped overwriting resource '{row['UUID']}' since parameter '-f' was not given!")
+            if (args.force) or (FORCE_OVERWRITE == 'True'):
+                print(f"WARNING: overwriting resource '{row['UUID']}' since it already exists")
+                print(slm.create_resource(uuid=row["UUID"], item=device_resource_item))
+                resources_added.append(f"{row['UUID']}, {device_resource_item['resourceHostname']}, {device_resource_item['resourceIp']}")
+            else:
+                print(f"WARNING: skipped overwriting resource '{row['UUID']}' since parameter '-f' was not given!")
         else:
-                uuid_str = str(uuid.uuid4()) if GENERATE_UUID == "True" else row['UUID']
-                print(slm.create_resource(uuid=uuid_str, item=device_resource_item))
-                resources_added.append(f"{uuid_str}, {device_resource_item['resourceHostname']}, {device_resource_item['resourceIp']}")
+            uuid_str = str(uuid.uuid4()) if GENERATE_UUID == "True" else row['UUID']
+            print(slm.create_resource(uuid=uuid_str, item=device_resource_item))
+            resources_added.append(f"{uuid_str}, {device_resource_item['resourceHostname']}, {device_resource_item['resourceIp']}")
         
         # print("pause for registry to breath")
         time.sleep(0.3)
@@ -203,9 +206,9 @@ def main(args):
         print(f"Checking available resources again")
         resources_current = [resource["id"] for resource in slm.get_resources()]
         if len(resources_current) > 0:
-                print(f"'{len(resources_current)}' resources are available. Continuing with adding capabilities...")
+            print(f"'{len(resources_current)}' resources are available. Continuing with adding capabilities...")
         else:
-                print(f"ERROR: '{len(resources_current)}' resources are available. Continuing, but expecting failure!")
+            print(f"ERROR: '{len(resources_current)}' resources are available. Continuing, but expecting failure!")
 
 
     print(f"\nStarting adding capabilities:----------------------------------------------------------------------------------------------")
@@ -215,34 +218,34 @@ def main(args):
         # parse capabilities
         capabilities = []
         if "DC_Dummy" in row.keys() and row["DC_Dummy"] == "yes":
-                capabilities.append("DUMMY")
+            capabilities.append("DUMMY")
         if "DC_Docker" in row.keys() and row["DC_Docker"] == "yes":
-                capabilities.append("DOCKER")
+            capabilities.append("DOCKER")
         if "DC_Transferapp" in row.keys() and row["DC_Transferapp"] == "yes":
-                capabilities.append("TRANSFERAPP")
+            capabilities.append("TRANSFERAPP")
         if "DC_Swarm" in row.keys() and row["DC_Swarm"] == "yes":
-                capabilities.append("DOCKER_SWARM")
+            capabilities.append("DOCKER_SWARM")
         if "DC_K3S" in row.keys() and row["DC_K3S"] == "yes":
-                capabilities.append("K3S")
+            capabilities.append("K3S")
 
         if not len(capabilities) > 0:
-                print(f"WARN: no capabilities parse for resource '{row['UUID']}'. Will skip call to add ...")      
-                print("------------------------------------------------------------------------")
-                continue
+            print(f"WARN: no capabilities parse for resource '{row['UUID']}'. Will skip call to add ...")      
+            print("------------------------------------------------------------------------")
+            continue
 
         if row["UUID"] in resources_current:
-                res = slm.add_capabilities(
-                        uuid=row["UUID"],
-                        capabilities=capabilities,
-                        overwrite=(args.force) or (FORCE_OVERWRITE == 'True')
-                )
+            res = slm.add_capabilities(
+                uuid=row["UUID"],
+                capabilities=capabilities,
+                overwrite=(args.force) or (FORCE_OVERWRITE == 'True')
+            )
 
-                # only add capabilties to list if result is provided (implies that request succeeded)
-                if res:
-                        print(res)
-                        resources_capabilities_added.append(f"{row['UUID']}, {row['hostname']}, {capabilities}")
+            # only add capabilties to list if result is provided (implies that request succeeded)
+            if res:
+                print(res)
+                resources_capabilities_added.append(f"{row['UUID']}, {row['hostname']}, {capabilities}")
         else:
-                print(f"FAILED: cannot add capabilities to resource {row['UUID']} since it is not registered at the registry (yet). Skipping...")
+            print(f"FAILED: cannot add capabilities to resource {row['UUID']} since it is not registered at the registry (yet). Skipping...")
 
         print("pause for registry to breath (long - 5s) ... will continue with adding aasx submodels\n------------------------------------------------------------------------")
         time.sleep(5)
@@ -258,29 +261,29 @@ def main(args):
 
         capabilities = []
         if "aasx-filter-substring" in row.keys() and len(str(row["aasx-filter-substring"])) > 0 and str(row["aasx-filter-substring"]) != "nan":
-                paths = [aasx_path for aasx_path in aasx_files if str(row["aasx-filter-substring"]) in aasx_path]
-                files = [("aasx", open(path, 'rb')) for path in paths]
-                print(f"Found '{len(paths)}' aasx files matching given filter substring '{str(row['aasx-filter-substring'])}' for resource '{row['UUID']}' ...")
+            paths = [aasx_path for aasx_path in aasx_files if str(row["aasx-filter-substring"]) in aasx_path]
+            files = [("aasx", open(path, 'rb')) for path in paths]
+            print(f"Found '{len(paths)}' aasx files matching given filter substring '{str(row['aasx-filter-substring'])}' for resource '{row['UUID']}' ...")
 
         else:
-                print(f"WARN: no aasx files filter (aasx-filter-substring) available for for resource '{row['UUID']}'. Will skip to add submodels ...")      
-                print("------------------------------------------------------------------------")
-                continue
+            print(f"WARN: no aasx files filter (aasx-filter-substring) available for for resource '{row['UUID']}'. Will skip to add submodels ...")      
+            print("------------------------------------------------------------------------")
+            continue
 
         if row["UUID"] in resources_current:
-                res = slm.add_submodels(
-                        uuid=row["UUID"],
-                        files=files
-                )
+            res = slm.add_submodels(
+                uuid=row["UUID"],
+                files=files
+            )
 
-                # only add submodels to list if result is provided (implies that request succeeded)
-                if res:
-                        aasxs_added.append(f"{row['UUID']}, {files}")
+            # only add submodels to list if result is provided (implies that request succeeded)
+            if res:
+                aasxs_added.append(f"{row['UUID']}, {files}")
         else:
-                print(f"FAILED: cannot add aasx submodels to resource {row['UUID']} since it is not registered at the registry (yet). Skipping...")
+            print(f"FAILED: cannot add aasx submodels to resource {row['UUID']} since it is not registered at the registry (yet). Skipping...")
         print("------------------------------------------------------------------------")
         time.sleep(1)
-        
+
 
     # finish
     print("\nSUMMARY -------------------------------------------------------------------------------------------------------------------")

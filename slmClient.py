@@ -107,10 +107,10 @@ class slmClient():
             headers=headers
         )
 
-        if item["resourceBaseConfiguration"]:
-            item["resourceBaseConfiguration"] = CAPABILITY_NAME_TO_ID["BASE"]
-        else:
-            del item["resourceBaseConfiguration"]
+        # if item["resourceBaseConfiguration"]:
+        #     item["resourceBaseConfiguration"] = CAPABILITY_NAME_TO_ID["BASE"]
+        # else:
+        #     del item["resourceBaseConfiguration"]
 
         if res.status_code in [200, 201]:
             print(f"SUCCESS({res.status_code}): added resource '{uuid}' with config: {item}")

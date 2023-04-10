@@ -156,8 +156,8 @@ def main(args):
             if not row["location-uuid"] in locations_current:
                 print(f"WARNING: Location uuid '{row['location-uuid']}' for resource '{device_resource_item['resourceHostname']}' not registered yet... But proceed adding resource")
 
-        # add flag for install of BaseConfigCapability (aka. FabOS Device Capability) - True/False
-        device_resource_item['resourceBaseConfiguration'] = "DC_Base" in row.keys() and row["DC_Base"] == "yes"
+        # # add flag for install of BaseConfigCapability (aka. FabOS Device Capability) - True/False
+        # device_resource_item['resourceBaseConfiguration'] = "DC_Base" in row.keys() and row["DC_Base"] == "yes"
                
 
         # check if hostname is available, IF PING_CHECK is set

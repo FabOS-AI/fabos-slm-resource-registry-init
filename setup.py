@@ -279,6 +279,7 @@ def main(args):
         else:
                 print(f"FAILED: cannot add aasx submodels to resource {row['UUID']} since it is not registered at the registry (yet). Skipping...")
         print("------------------------------------------------------------------------")
+        time.sleep(1)
         
 
     # finish

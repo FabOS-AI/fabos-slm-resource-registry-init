@@ -23,6 +23,7 @@ FORCE_DELETE = os.getenv("FORCE_DELETE", "False")
 DELETE_ALL = os.getenv("DELETE_ALL", "False")
 PING_CHECK = os.getenv("PING_CHECK", "False")
 GENERATE_UUID = os.getenv("GENERATE_UUID", "False")
+AASX_FILE_FILTER = os.getenv("AASX_FILE_FILTER", "/files/**/*.aasx")
 
 # print variables
 print("RESOURCE REGISTRY INIT: CONFIG SUMMARY (environment or defaults) ----------------------------------------------------------")
@@ -38,6 +39,7 @@ print("FORCE_DELETE: ", FORCE_DELETE)
 print("DELETE_ALL: ", DELETE_ALL)
 print("PING_CHECK: ", PING_CHECK)
 print("GENERATE_UUID: ", GENERATE_UUID)
+print("AASX_FILE_FILTER: ", AASX_FILE_FILTER)
 print("RESOURCE REGISTRY INIT:----------------------------------------------------------------------------------------------------")
 
 
@@ -252,8 +254,8 @@ def main(args):
 
     print(f"\nStarting adding aasx submodels:----------------------------------------------------------------------------------------------")
     resources_current = [resource["id"] for resource in slm.get_resources()]
-    aasx_files = glob.glob("/files/*.aasx")
-    print(f"Found '{len(aasx_files)}' AASX file(s) for filter '/files/*.aasx' ...\n")
+    aasx_files = glob.glob(AASX_FILE_FILTER, recursive=True)
+    print(f"Found '{len(aasx_files)}' AASX file(s) for filter '{AASX_FILE_FILTER}' ...\n")
 
     for index, row in df_devices.iterrows():
 

@@ -273,14 +273,17 @@ def main(args):
             continue
 
         if row["UUID"] in resources_current:
-            res = slm.add_submodels(
-                uuid=row["UUID"],
-                files=files
-            )
 
-            # only add submodels to list if result is provided (implies that request succeeded)
-            if res:
-                aasxs_added.append(f"{row['UUID']}, {files}")
+            for file_item in files:
+                res = slm.add_submodels(
+                    uuid=row["UUID"],
+                    files=[file_item]
+                )
+                time.sleep(3)
+
+                # only add submodels to list if result is provided (implies that request succeeded)
+                if res:
+                    aasxs_added.append(f"{row['UUID']}, {files}")
         else:
             print(f"FAILED: cannot add aasx submodels to resource {row['UUID']} since it is not registered at the registry (yet). Skipping...")
         print("------------------------------------------------------------------------")

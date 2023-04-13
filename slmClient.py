@@ -1,5 +1,5 @@
+import json
 import requests
-
 
 DEFAULT_RESOURCE_ITEM = {
     "resourceHostname": "",
@@ -138,7 +138,8 @@ class slmClient():
             # prepare requets
             headers = {
                 'Authorization': self.token,
-                'Realm': 'fabos'
+                'Realm': 'fabos',
+                'Content-Type': 'application/json'
             }
 
             # get already registered capability of given resource
@@ -199,13 +200,15 @@ class slmClient():
 
         headers = {
             'Authorization': self.token,
-            'Realm': 'fabos'
+            'Realm': 'fabos',
+            'Content-Type': 'application/json'
         }
 
         capabilityId = CAPABILITY_NAME_TO_ID[capability]
         res = requests.put(
-            url=f"{self.host_resource_registry}/resources/{uuid}/capabilities?capabilityId={capabilityId}",
-            headers=headers
+            url=f"{self.host_resource_registry}/resources/{uuid}/capabilities?capabilityId={capabilityId}&skipInstall=false",
+            headers=headers,
+            data=json.dumps({})
         )
 
         if res.status_code in [200, 201]:

@@ -15,6 +15,7 @@ SLM_HOST = str(os.getenv("SLM_HOST", "http://192.168.153.47"))
 SLM_USER = str(os.getenv("SLM_USER", "fabos"))
 SLM_PASSWORD = str(os.getenv("SLM_PASSWORD", "password"))
 RESOURCE_REGISTRY_HOST = str(os.getenv("RESOURCE_REGISTRY_HOST", f"{SLM_HOST}:9010"))
+SERVICE_REGISTRY_HOST = str(os.getenv("SERVICE_REGISTRY_HOST", f"{SLM_HOST}:9020"))
 KEYCLOAK_HOST = str(os.getenv("KEYCLOAK_HOST", f"{SLM_HOST}:7080"))
 XLSX_FILE = str(os.getenv("XLSX_FILE", "example.xlsx"))
 SHEET_NAME = str(os.getenv("SHEET_NAME", "DEVICES"))
@@ -31,6 +32,7 @@ print("SLM_HOST: ", SLM_HOST)
 print("SLM_USER: ", SLM_USER)
 print("SLM_PASSWORD: ", SLM_PASSWORD)
 print("RESOURCE_REGISTRY_HOST: ", RESOURCE_REGISTRY_HOST)
+print("SERVICE_REGISTRY_HOST: ", SERVICE_REGISTRY_HOST)
 print("KEYCLOAK_HOST: ", KEYCLOAK_HOST)
 print("XLSX_FILE: ", XLSX_FILE)
 print("SHEET_NAME: ", SHEET_NAME)
@@ -80,7 +82,13 @@ def main(args):
         df_locations = pd.read_excel(XLSX_FILE, sheet_name="LOCATIONS")
         print(f"Loaded '{len(df_locations)}' devices from sheet 'LOCATIONS' in file '{XLSX_FILE}'")
     else:
-        print("ERORR: sheet name 'LOCATIONS' does not exist in file '{XLSX_FILE}'. Cannot process location data!")    
+        print("ERORR: sheet name 'LOCATIONS' does not exist in file '{XLSX_FILE}'. Cannot process location data!")
+    
+    if "SERVICE_GROUPS" in sheet_names:
+        df_groups = pd.read_excel(XLSX_FILE, sheet_name="SERVICE_GROUPS")
+        print(f"Loaded '{len(df_groups)}' service groups from sheet 'SERVICE_GROUPS' in file '{XLSX_FILE}'")
+    else:
+        print("ERORR: sheet name 'SERVICE_GROUPS' does not exist in file '{XLSX_FILE}'. Cannot process service group data!")  
 
     # setup empty summary cache arrays
     resources_added = []
@@ -88,6 +96,7 @@ def main(args):
     resources_capabilities_added = []
     resources_deleted = []
     locations_added = []
+    groups_added = []
     aasxs_added = []
 
     # get current state
@@ -96,10 +105,12 @@ def main(args):
         host=SLM_HOST,
         host_keycloak=KEYCLOAK_HOST,
         host_resource_registry=RESOURCE_REGISTRY_HOST,
+        host_service_registry=SERVICE_REGISTRY_HOST,
         slm_user=SLM_USER,
         slm_password=SLM_PASSWORD
     )
     locations_current = slm.get_locations()
+    groups_current = slm.get_service_groups()
     resources_current = [resource["id"] for resource in slm.get_resources()]
 
     # add locations
@@ -108,12 +119,28 @@ def main(args):
         for location_item in locations_current:
             slm.delete_location(uuid=location_item['id'])
     
-    if len(df_locations) > 0:
-        print(f"\nStarting adding locations (in total '{len(df_locations)}' locations):---------------------------------------------------------------")
+    if df_locations is not None and len(df_locations) > 0:
+        print(f"\nStarting adding locations (in total '{len(df_locations)}' locations):------------------------------------------------------------------------")
         for index, row in df_locations.iterrows():
             if slm.create_location(row["UUID"], row["Name"]):
                 locations_added.append(f'{row["Name"]} ({row["UUID"]})')
     locations_current = [location["id"] for location in slm.get_locations()] 
+
+
+    ### add service groups
+    if DELETE_ALL == 'True':
+        print(f"\nStarting service group clean up (DELETE_ALL={DELETE_ALL}):---------------------------------------------------------------------------------------")
+        print(groups_current)
+        for group_item in groups_current:
+            slm.delete_service_group(uuid=group_item['id'])
+
+    if df_groups is not None and len(df_groups) > 0:
+        print(f"\nStarting adding service groups (in total '{len(df_groups)}' groups):-------------------------------------------------------------------------")
+        for index, row in df_groups.iterrows():
+
+            if slm.create_service_group(row["UUID"], row["Name"]):
+                groups_added.append(f'{row["Name"]} ({row["UUID"]})')
+    groups_current = [group["id"] for group in slm.get_service_groups()] 
 
 
 
@@ -295,6 +322,7 @@ def main(args):
     print(f"Resources deleted (via REST): {json.dumps(resources_deleted, indent=2)}")
     print(f"Resources accessible (via ping): {json.dumps(resources_accessible, indent=2)}")
     print(f"Locations added to registry (via REST): {json.dumps(locations_added, indent=2)}")
+    print(f"Service Groups added to registry (via REST): {json.dumps(groups_added, indent=2)}")
     print(f"Resources added to registry (via REST): {json.dumps(resources_added, indent=2)}")
     print(f"Capabilities added to resources (via REST): {json.dumps(resources_capabilities_added, indent=2)}")
     print(f"AAS submodels added to resources (via REST): {json.dumps(aasxs_added, indent=2)}")

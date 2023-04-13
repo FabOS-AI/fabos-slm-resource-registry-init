@@ -20,10 +20,11 @@ CAPABILITY_NAME_TO_ID = {
 class slmClient():
     """A client class for interaction with the SLM
     """
-    def __init__(self, host, host_keycloak, host_resource_registry, slm_user, slm_password):
+    def __init__(self, host, host_keycloak, host_resource_registry, host_service_registry, slm_user, slm_password):
         self.host = host
         self.host_keycloak = host_keycloak
         self.host_resource_registry = host_resource_registry
+        self.host_service_registry = host_service_registry
         self.slm_user = slm_user
         self.slm_password = slm_password
         self.token = f"Bearer {self.get_keycloak_token()}"
@@ -107,10 +108,10 @@ class slmClient():
             headers=headers
         )
 
-        # if item["resourceBaseConfiguration"]:
-        #     item["resourceBaseConfiguration"] = CAPABILITY_NAME_TO_ID["BASE"]
-        # else:
-        #     del item["resourceBaseConfiguration"]
+        if item["resourceBaseConfiguration"]:
+            item["resourceBaseConfiguration"] = CAPABILITY_NAME_TO_ID["BASE"]
+        else:
+            del item["resourceBaseConfiguration"]
 
         if res.status_code in [200, 201]:
             print(f"SUCCESS({res.status_code}): added resource '{uuid}' with config: {item}")
@@ -328,7 +329,7 @@ class slmClient():
             print(f"SUCCESS({res.status_code}): added location '{name}' ({uuid})")
         else:
             print(f"FAILED({res.status_code}): adding location '{name}' ({uuid})")
-        return res
+        return res.json()
     
     def delete_location(self, uuid:str) -> requests.models.Response:
         """Deletes the location with the given uuid
@@ -350,10 +351,10 @@ class slmClient():
         )
 
         if res.status_code in [200, 201]:
-            print(f"SUCCESS({res.status_code}): delete location '{uuid}'")
+            print(f"SUCCESS({res.status_code}): deleted location '{uuid}'")
         else:
-            print(f"FAILED({res.status_code}): adding location '{uuid}'")
-        return res
+            print(f"FAILED({res.status_code}): deleting location failed '{uuid}'")
+        return res.json()
     
     def get_locations(self) -> list:
         """Gets all locations from resource registry
@@ -376,4 +377,80 @@ class slmClient():
         else:
             print(f"FAILED({res.status_code}): getting locations failed")
 
+        return res.json()
+    
+    def get_service_groups(self) -> list:
+        """Gets all service groups from service registry
+
+        Returns:
+            list: list of groups
+        """
+
+        headers = {
+            'Authorization': self.token,
+            'Realm': 'fabos'
+        }
+        res = requests.get(
+            url=f"{self.host_service_registry}/services/instances/groups",
+            headers=headers
+        )
+
+        if res.status_code in [200, 201]:
+            print(f"SUCCESS({res.status_code}): found '{len(res.json())}' service groups")
+        else:
+            print(f"FAILED({res.status_code}): getting service groups failed")
+
+        return res.json()
+    
+    def create_service_group(self, uuid:str, name:str) -> requests.models.Response:
+        """Creates the service group with the given uuid
+
+        Args:
+            uuid (str): the uuid of the service group to be created
+            name (str): the name of the service group to be created
+
+        Returns:
+            requests.models.Response: the raw HTTP response
+        """
+
+        headers = {
+            'Authorization': self.token,
+            'Realm': 'fabos',
+            'Content-Type': 'application/json'
+        }
+        res = requests.put(
+            url=f"{self.host_service_registry}/services/instances/groups/{uuid}",
+            data=json.dumps({"id": f"{uuid}", "name": f"{name}"}),
+            headers=headers
+        )
+
+        if res.status_code in [200, 201]:
+            print(f"SUCCESS({res.status_code}): added service group '{name}' ({uuid})")
+        else:
+            print(f"FAILED({res.status_code}): adding service group failed '{name}' ({uuid})")
+        return res.json()
+    
+    def delete_service_group(self, uuid:str) -> requests.models.Response:
+        """Deletes the service group with the given uuid
+
+        Args:
+            uuid (str): the uuid of the location to be deleted
+
+        Returns:
+            requests.models.Response: the raw HTTP response
+        """
+
+        headers = {
+            'Authorization': self.token,
+            'Realm': 'fabos'
+        }
+        res = requests.delete(
+            url=f"{self.host_service_registry}/services/instances/groups?id={uuid}",
+            headers=headers
+        )
+
+        if res.status_code in [200, 201]:
+            print(f"SUCCESS({res.status_code}): deleted service group '{uuid}'")
+        else:
+            print(f"FAILED({res.status_code}): deleting service group failed '{uuid}'")
         return res.json()

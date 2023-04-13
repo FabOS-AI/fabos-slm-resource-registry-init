@@ -130,7 +130,6 @@ def main(args):
     ### add service groups
     if DELETE_ALL == 'True':
         print(f"\nStarting service group clean up (DELETE_ALL={DELETE_ALL}):---------------------------------------------------------------------------------------")
-        print(groups_current)
         for group_item in groups_current:
             slm.delete_service_group(uuid=group_item['id'])
 
@@ -185,8 +184,9 @@ def main(args):
             if not row["location-uuid"] in locations_current:
                 print(f"WARNING: Location uuid '{row['location-uuid']}' for resource '{device_resource_item['resourceHostname']}' not registered yet... But proceed adding resource")
 
-        # # add flag for install of BaseConfigCapability (aka. FabOS Device Capability) - True/False
-        # device_resource_item['resourceBaseConfiguration'] = "DC_Base" in row.keys() and row["DC_Base"] == "yes"
+        # add flag for install of BaseConfigCapability (aka. FabOS Device Capability) - True/False
+        if "DC_Base" in row.keys() and (row["DC_Base"] in ["yes", "skip"]):
+            device_resource_item['resourceBaseConfiguration'] = "DC_Base"
                
 
         # check if hostname is available, IF PING_CHECK is set
@@ -246,16 +246,16 @@ def main(args):
 
         # parse capabilities
         capabilities = []
-        if "DC_Dummy" in row.keys() and row["DC_Dummy"] == "yes":
-            capabilities.append("DUMMY")
-        if "DC_Docker" in row.keys() and row["DC_Docker"] == "yes":
-            capabilities.append("DOCKER")
-        if "DC_Transferapp" in row.keys() and row["DC_Transferapp"] == "yes":
-            capabilities.append("TRANSFERAPP")
-        if "DC_Swarm" in row.keys() and row["DC_Swarm"] == "yes":
-            capabilities.append("DOCKER_SWARM")
-        if "DC_K3S" in row.keys() and row["DC_K3S"] == "yes":
-            capabilities.append("K3S")
+        if "DC_Dummy" in row.keys() and (row["DC_Dummy"] in ["yes", "skip"]):
+            capabilities.append(("DUMMY", row["DC_Dummy"]))
+        if "DC_Docker" in row.keys() and (row["DC_Docker"] in ["yes", "skip"]):
+            capabilities.append(("DOCKER", row["DC_Docker"]))
+        if "DC_Transferapp" in row.keys() and (row["DC_Transferapp"] in ["yes", "skip"]):
+            capabilities.append(("TRANSFERAPP", row["DC_Transferapp"]))
+        if "DC_Swarm" in row.keys() and (row["DC_Swarm"] in ["yes", "skip"]):
+            capabilities.append(("DOCKER_SWARM", row["DC_Swarm"]))
+        if "DC_K3S" in row.keys() and (row["DC_K3S"] in ["yes", "skip"]):
+            capabilities.append(("K3S", row["DC_K3S"]))
 
         if not len(capabilities) > 0:
             print(f"WARN: no capabilities parse for resource '{row['UUID']}'. Will skip call to add ...")      

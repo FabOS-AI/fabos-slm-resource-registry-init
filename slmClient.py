@@ -8,7 +8,7 @@ DEFAULT_RESOURCE_ITEM = {
 }
 
 CAPABILITY_NAME_TO_ID = {
-    "BASE" : "????",
+    "BASE" : "657d64b6-7f8a-41b7-8202-d3fb7c0ddaac",
     "DUMMY" : "2c8cafe5-1155-471c-9639-0db48ec249eb",
     "DOCKER": "08c5b8de-5d4a-4116-a73f-1d1f616c7c70",
     "TRANSFERAPP": "110d43ff-f351-4e55-92c0-77625875ce6e",
@@ -102,16 +102,19 @@ class slmClient():
             'Authorization': self.token,
             'Realm': 'fabos'
         }
+
+        if "resourceBaseConfiguration" in item.keys():
+            if item["resourceBaseConfiguration"] == "DC_Base":
+                item["resourceBaseConfiguration"] = CAPABILITY_NAME_TO_ID["BASE"]
+            else:
+                del item["resourceBaseConfiguration"]
+
         res = requests.put(
             url=f"{self.host_resource_registry}/resources/{uuid}",
             data=item,
             headers=headers
         )
 
-        if item["resourceBaseConfiguration"]:
-            item["resourceBaseConfiguration"] = CAPABILITY_NAME_TO_ID["BASE"]
-        else:
-            del item["resourceBaseConfiguration"]
 
         if res.status_code in [200, 201]:
             print(f"SUCCESS({res.status_code}): added resource '{uuid}' with config: {item}")
@@ -150,37 +153,37 @@ class slmClient():
             )
 
             # iterate through given capability candidates given
-            for capability in capabilities:
+            for capability_item in capabilities:
 
                 # filter if capability candidate is valid, else skip adding
-                if capability in capability_options:
+                if capability_item[0] in capability_options:
 
                     if len(res_get.json()) < 1:
 
-                        print(f"Adding capability '{capability}' to resource '{uuid}'. Since resource has no capabilities yet")
-                        res = self.add_capability(uuid=uuid, capability=capability)
+                        print(f"Adding capability '{capability_item[0]}' to resource '{uuid}'. Since resource has no capabilities yet")
+                        res = self.add_capability(uuid=uuid, capability=capability_item[0], row_value=capability_item[1])
 
                     else:
                         # parse fetched capabilties
                         parsed_available_capabilities = [ item['name'] for item in res_get.json()]
 
                         # add capability if already is registered but overwirte is True
-                        if (capability in parsed_available_capabilities) and overwrite:
-                            print(f"OVERWRITE: adding capability '{capability}' to resource '{uuid}'. Overwriting already available capbility!")
-                            res = self.add_capability(uuid=uuid, capability=capability)
+                        if (capability_item[0] in parsed_available_capabilities) and overwrite:
+                            print(f"OVERWRITE: adding capability '{capability_item[0]}' to resource '{uuid}'. Overwriting already available capbility!")
+                            res = self.add_capability(uuid=uuid, capability=capability_item[0], row_value=capability_item[1])
 
                         # add capability if specific capability is not already registered
-                        elif capability not in parsed_available_capabilities:
-                            print(f"Adding capability '{capability}' to resource '{uuid}'. Since resource has the capability not yet!")
-                            res = self.add_capability(uuid=uuid, capability=capability)
+                        elif capability_item[0] not in parsed_available_capabilities:
+                            print(f"Adding capability '{capability_item[0]}' to resource '{uuid}'. Since resource has the capability not yet!")
+                            res = self.add_capability(uuid=uuid, capability=capability_item[0], row_value=capability_item[1])
 
                         # skip adding capbility
                         else:
-                            print(f"SKIP: skipping adding capability '{capability}' to resource '{uuid}'. Since it already has the capbility and FORCE_OVERWRITE is not given!")
+                            print(f"SKIP: skipping adding capability '{capability_item[0]}' to resource '{uuid}'. Since it already has the capbility and FORCE_OVERWRITE is not given!")
                             res = None
 
                 else:
-                    print(f"FAILED: capability '{capability}' not in available options {capability_options}. Skipping ...")
+                    print(f"FAILED: capability '{capability_item[0]}' not in available options {capability_options}. Skipping ...")
                     return None
             return res
 
@@ -188,7 +191,7 @@ class slmClient():
             print(f"SKIP: adding capabilities skipped for resource '{uuid}' since no are given ...")
             return None
 
-    def add_capability(self, uuid: str, capability: str) -> requests.models.Response:
+    def add_capability(self, uuid: str, capability: str, row_value: str) -> requests.models.Response:
         """Adds capability to resource
 
         Args:
@@ -205,18 +208,20 @@ class slmClient():
             'Content-Type': 'application/json'
         }
 
+        skip_flag = 'true' if row_value == 'skip' else 'false'
+
         capabilityId = CAPABILITY_NAME_TO_ID[capability]
         res = requests.put(
-            url=f"{self.host_resource_registry}/resources/{uuid}/capabilities?capabilityId={capabilityId}&skipInstall=false",
+            url=f"{self.host_resource_registry}/resources/{uuid}/capabilities?capabilityId={capabilityId}&skipInstall={skip_flag}",
             headers=headers,
             data=json.dumps({})
         )
 
         if res.status_code in [200, 201]:
-            print(f"SUCCESS({res.status_code}): added capability '{capability}' for resource '{uuid}'")
+            print(f"SUCCESS({res.status_code}): added capability '{capability}' for resource '{uuid}' (skip={skip_flag})")
             return res
         else:
-            print(f"FAILED({res.status_code}): adding capability '{capability}' for resource '{uuid}'")
+            print(f"FAILED({res.status_code}): adding capability '{capability}' for resource '{uuid}' (skip={skip_flag})")
             print(res.text)
             return None
 
@@ -327,9 +332,10 @@ class slmClient():
 
         if res.status_code in [200, 201]:
             print(f"SUCCESS({res.status_code}): added location '{name}' ({uuid})")
+            return res
         else:
             print(f"FAILED({res.status_code}): adding location '{name}' ({uuid})")
-        return res.json()
+            return res.json()
     
     def delete_location(self, uuid:str) -> requests.models.Response:
         """Deletes the location with the given uuid
@@ -352,9 +358,10 @@ class slmClient():
 
         if res.status_code in [200, 201]:
             print(f"SUCCESS({res.status_code}): deleted location '{uuid}'")
+            return res
         else:
             print(f"FAILED({res.status_code}): deleting location failed '{uuid}'")
-        return res.json()
+            return res.json()
     
     def get_locations(self) -> list:
         """Gets all locations from resource registry
@@ -376,7 +383,6 @@ class slmClient():
             print(f"SUCCESS({res.status_code}): found '{len(res.json())}' location items")
         else:
             print(f"FAILED({res.status_code}): getting locations failed")
-
         return res.json()
     
     def get_service_groups(self) -> list:
@@ -426,9 +432,10 @@ class slmClient():
 
         if res.status_code in [200, 201]:
             print(f"SUCCESS({res.status_code}): added service group '{name}' ({uuid})")
+            return res
         else:
             print(f"FAILED({res.status_code}): adding service group failed '{name}' ({uuid})")
-        return res.json()
+            return res.json()
     
     def delete_service_group(self, uuid:str) -> requests.models.Response:
         """Deletes the service group with the given uuid
@@ -451,6 +458,7 @@ class slmClient():
 
         if res.status_code in [200, 201]:
             print(f"SUCCESS({res.status_code}): deleted service group '{uuid}'")
+            return res
         else:
             print(f"FAILED({res.status_code}): deleting service group failed '{uuid}'")
-        return res.json()
+            return res.json()

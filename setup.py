@@ -283,7 +283,7 @@ def main(args):
 
                 # only add submodels to list if result is provided (implies that request succeeded)
                 if res:
-                    aasxs_added.append(f"{row['UUID']}, {files}")
+                    aasxs_added.append(f"{row['UUID']}, {file_item}")
         else:
             print(f"FAILED: cannot add aasx submodels to resource {row['UUID']} since it is not registered at the registry (yet). Skipping...")
         print("------------------------------------------------------------------------")
